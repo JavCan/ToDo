@@ -1,21 +1,22 @@
-# Ruta: /cloudbuild.yaml
-substitutions:
-  _REGION: us-central1
-  _REPOSITORY: backend
-  _IMAGE: backend
-  _SERVICE: backend
-
 steps:
-  - id: package
-    name: maven:3.9-eclipse-temurin-21
-    entrypoint: ./mvnw
-    args: ['-B', '-DskipTests', 'package'] #
+  # Paso 0: Maven con Java 21
+  - name: "maven:3.9-eclipse-temurin-21"
+    entrypoint: "mvn"
+    args: [ "clean", "install", "-DskipTests" ]
 
-  - id: build-and-push
-    name: gcr.io/cloud-builders/docker
-    args: ['build', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE}:latest', '.']
+  # Paso 1: Build de Docker apuntando al nuevo repo
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "us-central1-docker.pkg.dev/todo-494622/todo-repo/todo-app",
+        ".",
+      ]
 
-  - id: deploy
-    name: gcr.io/google.com/cloudsdktool/cloud-sdk
-    entrypoint: gcloud
-    args: ['run', 'deploy', '${_SERVICE}', '--image', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE}:latest', '--region', '${_REGION}', '--platform', 'managed', '--allow-unauthenticated']
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+# Cambia esto también para que coincida
+images:
+  - "us-central1-docker.pkg.dev/todo-494622/todo-repo/todo-app"
