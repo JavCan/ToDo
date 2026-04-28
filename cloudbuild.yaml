@@ -1,0 +1,21 @@
+# Ruta: /cloudbuild.yaml
+substitutions:
+  _REGION: us-central1
+  _REPOSITORY: backend
+  _IMAGE: backend
+  _SERVICE: backend
+
+steps:
+  - id: package
+    name: maven:3.9-eclipse-temurin-21
+    entrypoint: ./mvnw
+    args: ['-B', '-DskipTests', 'package'] #
+
+  - id: build-and-push
+    name: gcr.io/cloud-builders/docker
+    args: ['build', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE}:latest', '.']
+
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args: ['run', 'deploy', '${_SERVICE}', '--image', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE}:latest', '--region', '${_REGION}', '--platform', 'managed', '--allow-unauthenticated']

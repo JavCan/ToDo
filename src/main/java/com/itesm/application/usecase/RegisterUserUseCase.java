@@ -30,8 +30,8 @@ public class RegisterUserUseCase {
         UserRecord.CreateRequest createRequest = new UserRecord.CreateRequest()
                 .setEmail(user.getEmail())
                 .setPassword(registerUserDto.getPassword());
-        //UserRecord userRecord= FirebaseAuth.getInstance().createUser(createRequest);
-        //user.setFirebaseUuid(userRecord.getUid());
+        UserRecord userRecord = FirebaseAuth.getInstance().createUser(createRequest);
+        user.setFirebaseUuid(userRecord.getUid());
         user = userRepository.create(user);
         return user;
 

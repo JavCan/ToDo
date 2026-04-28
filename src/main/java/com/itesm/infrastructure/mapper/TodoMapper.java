@@ -4,7 +4,6 @@ import com.itesm.domain.models.Todo;
 import com.itesm.infrastructure.persistence.entity.TodoEntity;
 
 public class TodoMapper {
-
     public static TodoEntity toEntity(Todo todo) {
         TodoEntity todoEntity = new TodoEntity();
         todoEntity.setId(todo.getUuid());
@@ -22,6 +21,9 @@ public class TodoMapper {
         todo.setDescription(todoEntity.getDescription());
         todo.setCompleted(todoEntity.isCompleted());
         todo.setCreatedAt(todoEntity.getCreatedAt());
+        if (todoEntity.getOwner() != null) {
+            todo.setOwnerId(todoEntity.getOwner().getId());
+        }
         return todo;
     }
 }

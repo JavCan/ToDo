@@ -7,7 +7,6 @@ import com.itesm.domain.repository.TodoRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-import javax.sound.midi.SysexMessage;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -19,17 +18,18 @@ public class CreateTodoUseCase {
     @Inject
     public CreateTodoUseCase(TodoRepository todoRepository, AuthenticatedUserContext authenticatedUserContext) {
         this.todoRepository = todoRepository;
-        this.authenticatedUserContext= authenticatedUserContext;
+        this.authenticatedUserContext = authenticatedUserContext;
     }
 
     public Todo execute(CreateTodoDto createTodoDto) {
-        System.out.println("Desde use case: "+ authenticatedUserContext.getCurrentUser().getFullName());
         Todo todo = new Todo();
         todo.setUuid(UUID.randomUUID());
         todo.setCreatedAt(LocalDateTime.now());
         todo.setTitle(createTodoDto.getTitle());
         todo.setDescription(createTodoDto.getDescription());
         todo.setCompleted(false);
+        // Vincula la tarea al usuario actual
+        todo.setOwnerId(authenticatedUserContext.getCurrentUser().getUserId());
         return todoRepository.save(todo);
     }
 }

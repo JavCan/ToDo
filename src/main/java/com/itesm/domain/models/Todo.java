@@ -9,15 +9,25 @@ public class Todo {
     private String description;
     private boolean completed;
     private LocalDateTime createdAt;
+    private UUID ownerId; // Nuevo campo
 
-    public Todo(){
+    public Todo() {
     }
+
     public Todo(UUID uuid, String title, String description, boolean completed, LocalDateTime createdAt) {
         this.uuid = uuid;
         this.title = title;
         this.description = description;
         this.completed = completed;
         this.createdAt = createdAt;
+    }
+
+    public UUID getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(UUID ownerId) {
+        this.ownerId = ownerId;
     }
 
     public UUID getUuid() {
@@ -58,16 +68,5 @@ public class Todo {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
-    }
-
-    @Override
-    public String toString() {
-        return "Todo{" +
-                "uuid=" + uuid +
-                ", title='" + title + '\'' +
-                ", description='" + description + '\'' +
-                ", completed=" + completed +
-                ", createdAt=" + createdAt +
-                '}';
     }
 }
