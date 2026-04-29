@@ -15,55 +15,79 @@ import jakarta.ws.rs.container.ContainerRequestFilter;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.Provider;
 import io.quarkus.arc.profile.UnlessBuildProfile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Optional;
-
-import io.quarkus.arc.profile.UnlessBuildProfile;
 
 @Provider
 @Priority(Priorities.AUTHENTICATION)
 @UnlessBuildProfile("test")
 public class FirebaseAuthFilter implements ContainerRequestFilter {
+    
+    private static final Logger log = LoggerFactory.getLogger(FirebaseAuthFilter.class);
+
     @Inject
     UserRepository userRepository;
+
     @Inject
     AuthenticatedUserContext authenticatedUserContext;
 
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
         String path = requestContext.getUriInfo().getPath();
-        // Integración de rutas ignoradas de todas las ramas
+        
+        // Rutas ignoradas
         if (path.equals("/user") || path.equals("/status") || path.startsWith("/todo/demo")) {
             return;
         }
 
         String authHeader = requestContext.getHeaders().getFirst("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            System.err.println("FirebaseAuthFilter: Missing or invalid Authorization header. Received: " + authHeader);
-            requestContext.abortWith(Response.status(401).build());
+            log.warn("FirebaseAuthFilter: Missing or invalid Authorization header. Path: {}", path);
+            requestContext.abortWith(Response.status(Response.Status.UNAUTHORIZED)
+                    .entity("{\"error\": \"Missing or invalid Authorization header\"}")
+                    .build());
             return;
         }
 
+        String token = authHeader.substring(7);
+
         try {
-            FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(authHeader.replace("Bearer ", ""),
-                    true);
-            Optional<User> userOptional = userRepository.findByFirebaseUuid(decodedToken.getUid());
+            log.debug("Verificando token de Firebase para el path: {}", path);
+            FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token, true);
+            String uid = decodedToken.getUid();
+            log.info("Token de Firebase verificado. UID: {}", uid);
+
+            log.debug("Buscando usuario en la base de datos local para el UID: {}", uid);
+            Optional<User> userOptional = userRepository.findByFirebaseUuid(uid);
 
             if (userOptional.isEmpty()) {
-                System.out.println("FirebaseAuthFilter: User not found in DB with Firebase UID: " + decodedToken.getUid());
-                requestContext.abortWith(Response.status(401).build());
+                log.error("FirebaseAuthFilter: Usuario con UID {} no existe en la base de datos local.", uid);
+                requestContext.abortWith(Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("{\"error\": \"User not found in local database. UID: " + uid + "\"}")
+                        .build());
                 return;
             }
 
             User user = userOptional.get();
             CurrentUser currentUser = new CurrentUser(
                     user.getId(), user.getFirebaseUuid(), user.getEmail(), user.getRole(), user.getFullName());
+            
             authenticatedUserContext.setCurrentUser(currentUser);
+            log.info("Autenticación exitosa para el usuario: {}", user.getEmail());
+
         } catch (FirebaseAuthException e) {
-            System.err.println("FirebaseAuthFilter: Token verification failed!");
-            e.printStackTrace();
-            requestContext.abortWith(Response.status(401).build());
+            log.error("FirebaseAuthFilter: Token verification failed: {}", e.getMessage());
+            requestContext.abortWith(Response.status(Response.Status.UNAUTHORIZED)
+                    .entity("{\"error\": \"Invalid Firebase token\", \"details\": \"" + e.getMessage() + "\"}")
+                    .build());
+        } catch (Exception e) {
+            log.error("FirebaseAuthFilter: Error inesperado durante la autenticación", e);
+            requestContext.abortWith(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("{\"error\": \"Internal server error during authentication\", \"details\": \"" + e.getMessage() + "\"}")
+                    .build());
         }
     }
-}
+}
